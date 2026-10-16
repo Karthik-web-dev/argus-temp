@@ -82,8 +82,9 @@ class ModelSettings:
 
     @classmethod
     def from_env(cls) -> ModelSettings:
-        import argus.config  # noqa: F401 - ensure environment is loaded
         from dotenv import load_dotenv
+
+        import argus.config  # noqa: F401 - ensure environment is loaded
         load_dotenv()
         routes: dict[ModelTier, ModelRoute] = {}
         for tier in TIERS:

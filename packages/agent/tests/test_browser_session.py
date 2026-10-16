@@ -4,14 +4,19 @@ import asyncio
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from unittest.mock import AsyncMock, Mock
 
 import pytest
-
-from argus.browser.session import BrowserSessionFactory
+from argus.browser.session import (
+    BrowserSession,
+    BrowserSessionFactory,
+    RecordingOptions,
+)
+from playwright.async_api import Error as PlaywrightError
 
 
 class _PageHandler(BaseHTTPRequestHandler):
-    def do_GET(self):  # noqa: N802
+    def do_GET(self):
         body = b"<!doctype html><html><head><title>fixture</title></head><body>Browser fixture</body></html>"
         self.send_response(200)
         self.send_header("Content-Type", "text/html")
@@ -43,6 +48,29 @@ async def test_factory_launches_supported_engines(engine, tmp_path: Path):
         assert session.browser_type == engine
         assert (cdp is not None) is (engine == "chromium")
         await session.close()
+
+
+async def test_close_tolerates_playwright_errors_and_releases_session(tmp_path: Path):
+    context = Mock()
+    context.tracing.stop = AsyncMock(side_effect=PlaywrightError("target already closed"))
+    context.close = AsyncMock(side_effect=PlaywrightError("target already closed"))
+    cdp_session = Mock()
+    cdp_session.detach = AsyncMock(side_effect=PlaywrightError("target already closed"))
+    factory = Mock()
+    session = BrowserSession(
+        browser_type="chromium",
+        context=context,
+        page=Mock(),
+        cdp_session=cdp_session,
+        session_id="cleanup-regression",
+        artifact_dir=tmp_path,
+        recording=RecordingOptions(trace=True),
+        _factory=factory,
+    )
+
+    await session.close()
+
+    factory._release.assert_called_once_with(session)
 
 
 async def test_ten_concurrent_contexts_isolate_cookies_localstorage_and_indexeddb(tmp_path, local_origin):
@@ -94,7 +122,7 @@ async def test_ten_concurrent_contexts_isolate_cookies_localstorage_and_indexedd
 async def test_context_limit_blocks_until_a_session_closes(tmp_path):
     factory = BrowserSessionFactory(artifact_dir=tmp_path, concurrency_cap=2)
     first, _ = await factory.new_context()
-    second, _ = await factory.new_context()
+    _second, _ = await factory.new_context()
     pending = asyncio.create_task(factory.new_context())
     try:
         await asyncio.sleep(0.1)

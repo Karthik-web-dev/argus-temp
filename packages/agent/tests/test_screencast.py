@@ -32,10 +32,12 @@ async def test_screencast_frames_do_not_mutate_page_dom_or_animations(tmp_path):
           animationCount: document.getAnimations().length
         })""")
         frames: list[dict] = []
-        capture = CdpScreencastCapture(cdp, frames.append)
+        capture = CdpScreencastCapture(cdp, frames.append, page=session.page)
         try:
             await capture.start()
-            await session.page.wait_for_timeout(350)
+            # On Windows headless Chromium the CDP event can be silent, so
+            # allow the screenshot fallback enough time to publish its first frame.
+            await session.page.wait_for_timeout(1600)
         finally:
             await capture.stop()
         after = await session.page.evaluate("""() => ({

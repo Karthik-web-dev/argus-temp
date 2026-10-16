@@ -152,6 +152,9 @@ export function LiveView({
   const viewportWidth = cursorAction?.viewport_width ?? frameSize.width;
   const viewportHeight = cursorAction?.viewport_height ?? frameSize.height;
   const hasPoint = typeof cursorAction?.x === "number" && typeof cursorAction.y === "number";
+  const hasDetectionArea = hasPoint &&
+    typeof cursorAction?.width === "number" && cursorAction.width > 0 &&
+    typeof cursorAction?.height === "number" && cursorAction.height > 0;
   // CDP can capture a browser surface wider than the page viewport. In that
   // case the page is centered in the frame, so include the letterbox offset
   // when mapping Playwright viewport coordinates onto the overlay.
@@ -184,6 +187,43 @@ export function LiveView({
         )}
         {!fixtureSrc && cursorAction && hasPoint && (
           <>
+            {hasDetectionArea && (
+              <span
+                key={`area-${cursorAction.key}`}
+                className="argus-detection-area"
+                style={{
+                  left: `${frameX(cursorAction.x! - cursorAction.width! / 2)}%`,
+                  top: `${frameY(cursorAction.y! - cursorAction.height! / 2)}%`,
+                  width: `${(cursorAction.width! * pageScale / frameSize.width) * 100}%`,
+                  height: `${(cursorAction.height! * pageScale / frameSize.height) * 100}%`,
+                  position: "absolute",
+                  zIndex: 1,
+                  boxSizing: "border-box",
+                  border: "2px solid #67e2b2",
+                  borderRadius: 4,
+                  background: "rgba(75, 215, 162, 0.12)",
+                  boxShadow: "0 0 0 1px rgba(4, 12, 8, 0.8), 0 0 16px rgba(75, 215, 162, 0.32)",
+                  pointerEvents: "none",
+                }}
+                aria-label={`Detected area: ${cursorAction.locator ?? cursorAction.action ?? "target"}`}
+              >
+                <span style={{
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  transform: "translateY(-100%)",
+                  maxWidth: 260,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  padding: "3px 6px",
+                  borderRadius: "4px 4px 0 0",
+                  background: "#67e2b2",
+                  color: "#102017",
+                  font: "600 10px var(--mono)",
+                }}>{cursorAction.action ?? "detected"} · {cursorAction.locator ?? "target"}</span>
+              </span>
+            )}
             <span
               key={cursorAction.key}
               className={`argus-live-cursor ${cursorAction.action === "click" ? "clicked" : ""}`}

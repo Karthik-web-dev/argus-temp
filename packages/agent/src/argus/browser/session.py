@@ -17,6 +17,7 @@ from playwright.async_api import (
     Playwright,
     async_playwright,
 )
+from playwright.async_api import Error as PlaywrightError
 
 BrowserTypeName = Literal["chromium", "firefox", "webkit"]
 DEFAULT_VIEWPORT = {"width": 1280, "height": 720}

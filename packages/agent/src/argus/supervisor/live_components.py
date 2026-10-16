@@ -63,8 +63,9 @@ class LiveSpecParser:
             if not (self.target_url and self.layout and self.on_screencast_frame):
                 return await spec_task
 
-            from argus.browser.session import BrowserSessionFactory
             from playwright.async_api import Error as PlaywrightError
+
+            from argus.browser.session import BrowserSessionFactory
 
             factory = BrowserSessionFactory(artifact_dir=self.layout.artifacts_dir)
             session = None

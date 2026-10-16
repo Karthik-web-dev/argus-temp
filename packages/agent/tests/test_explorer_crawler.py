@@ -48,9 +48,11 @@ class RoutedSessionFactory(BrowserSessionFactory):
 
 
 async def test_crawler_discovers_routes_buttons_and_stops_at_caps(tmp_path: Path):
+    actions: list[dict] = []
     async with RoutedSessionFactory(artifact_dir=tmp_path) as factory:
         crawler = DeterministicCrawler(
-            session_factory=factory, max_pages=20, max_steps=100, timeout_ms=2000
+            session_factory=factory, max_pages=20, max_steps=100, timeout_ms=2000,
+            on_action=actions.append,
         )
         output = tmp_path / "app_graph.json"
         graph = await crawler.crawl("http://crawler.test/", output)
@@ -68,6 +70,12 @@ async def test_crawler_discovers_routes_buttons_and_stops_at_caps(tmp_path: Path
     assert all(edge.source in node_ids and edge.target in node_ids for edge in graph.edges)
     assert AppGraph.model_validate_json(output.read_text(encoding="utf-8")) == graph
     assert graph.adjacency
+    assert any(
+        action.get("action") == "click"
+        and isinstance(action.get("x"), (int, float))
+        and isinstance(action.get("y"), (int, float))
+        for action in actions
+    )
 
 
 async def test_crawler_bootstraps_auth_and_reuses_storage_state(tmp_path: Path):

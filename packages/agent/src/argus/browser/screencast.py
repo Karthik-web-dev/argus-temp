@@ -75,7 +75,7 @@ class CdpScreencastCapture:
                     "everyNthFrame": 1,
                 },
             )
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - CDP failure must leave screenshot fallback available.
             logger.warning("CDP screencast start failed: %s; relying on screenshot fallback", exc)
         self._started = True
         if self.page is not None:
@@ -143,7 +143,7 @@ class CdpScreencastCapture:
                 except PlaywrightError:
                     await asyncio.sleep(0.5)
                     continue
-                except Exception:
+                except Exception:  # noqa: BLE001 - transient screenshot failures should not stop the stream.
                     await asyncio.sleep(0.5)
                     continue
                 if not self._started:
